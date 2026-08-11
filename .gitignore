@@ -1,0 +1,23 @@
+# Logs
+logs/
+log/
+*.log
+*.events.out.tfevents.*
+
+# Caches
+__pycache__/
+*.py[cod]
+*$py.class
+.cache/
+*.cache
+.pytest_cache/
+
+# 訓練模型權重
+*.pt
+*.pth
+*.onnx
+
+# 系統與編輯器設定
+.DS_Store
+.vscode/
+.idea/
