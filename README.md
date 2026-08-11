@@ -4,15 +4,18 @@ Tancho 是一個 6 自由度（6-DOF）雙輪腿機器人專案。本專案包�
 
 ---
 
-## 目錄結構 (Directory Structure)
 
+## 📂 目錄結構 (Directory Structure)
+
+```text
 Tancho/
 ├── Tancho_v2/              # V2 URDF 與 Mesh 模型資源檔
-├── Tancho_v2_simready/    # Isaac Lab 一鍵部屬訓練
-├── Print.3mf              # 3D 列印切片設定檔 (Bambu Studio)
-├── Tancho.step            # 完整 STEP 模型
-├── Tancho_simplified.step # 簡化版 STEP 模型 （用於轉換URDF)
-└── README.md              # U r looking at
+├── Tancho_v2_simready/     # Isaac Lab 一鍵部署訓練環境與套件
+├── Print.3mf               # 3D 列印切片設定檔 (Bambu Studio)
+├── Tancho.step             # 完整 STEP 模型
+├── Tancho_simplified.step  # 簡化版 STEP 模型 (用於轉換 URDF)
+└── README.md               # 專案說明文件
+```
 
 ---
 
@@ -22,38 +25,46 @@ Tancho/
 * 完成基本 3D CAD 模型建立與 URDF 首次導出。
 * 包含各剛體（Links）與關節（Joints）的初始幾何資訊。
 
----
-
 ### V2 - 模型精確化與 RL 環境架設 (Current)
 * 修復 V1 導出時 Mesh 不精確、質量慣量與幾何中心偏差問題。
-* URDF 頂層加入 Dummy Root Link 並修正 X 軸旋轉與生成撞地。
-* 採用 Isaac Lab `ManagerBasedRLEnv` 寫法，於 `tancho_v2_env_cfg.py` 配置完整的 MDP 框架：
+* URDF 頂層加入 Dummy Root Link 並修正 X 軸旋轉與生成撞地問題。
+* 採用 Isaac Lab `ManagerBasedRLEnv` 寫法，於 `tancho_v2_env_cfg.py` 配置完整的 MDP 框架。
 
 ---
 
-## 快速開始 (Quick Start)
+##  快速開始 (Quick Start)
 
 ### 1. 啟動 PPO 強化學習訓練
-進到 Tancho_v2_simready 目錄並執行訓練指令：
+進到 `Tancho_v2_simready` 目錄並執行訓練指令：
 
+```bash
 conda activate env_isaaclab
 cd Tancho_v2_simready
 python scripts/rsl_rl/train.py --task=Template-TanchoV2-Direct-v0 --num_envs=4096 --headless
+```
 
----
 
 ### 2. 模型評估與視覺化展示 (Play)
 載入訓練好的模型檔進行推論測試：
-python scripts/rsl_rl/play.py --task=Template-TanchoV2-Direct-v0 --num_envs=16
 
----
+```bash
+python scripts/rsl_rl/play.py --task=Template-TanchoV2-Direct-v0 --num_envs=16
+```
+
 
 ### 3. 即時監控訓練曲線
 開啟 TensorBoard 觀察 Reward 與 Loss 變化：
 
+```bash
 tensorboard --logdir=logs/rsl_rl/
+```
+
 
 ---
 
-### 模擬環境與MDP函數路徑
-./Tancho/Tancho_v2_simready/source/stackforce_simready_tancho_v2_lab/stackforce_simready_tancho_v2_lab/tasks/direct/tancho_v2
+##  環境開發與 MDP 獎勵函數修改
+若需修改仿真環境參數、觀測值（Observations）、動作空間（Actions）或獎勵函數（Rewards），主要程式碼目錄位於：
+
+```text
+Tancho_v2_simready/source/stackforce_simready_tancho_v2_lab/stackforce_simready_tancho_v2_lab/tasks/direct/tancho_v2/
+```
