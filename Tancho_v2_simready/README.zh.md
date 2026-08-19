@@ -2,46 +2,89 @@
 
 本工程由 StackForce SimReady 匯出，可直接用於 Isaac Lab / Isaac Sim 訓練。
 
-### 直接可複製的訓練指令
+
+### 1. 安裝訓練環境
 
 ```bash
+cd Tancho_v2_simready
+chmod +x scripts/setup_stackforce_isaac_lab_sim_env.sh
+./scripts/setup_stackforce_isaac_lab_sim_env.sh
 conda activate env_isaaclab
-cd /media/azul/861896C11896B023/Tancho/Tancho_v2_simready
 python -m pip install -e source/stackforce_simready_tancho_v2_lab
-python scripts/list_envs.py
-python scripts/zero_agent.py --task Template-TanchoV2-Direct-v0 --headless --num_envs 8
-python scripts/rsl_rl/train.py --task Template-TanchoV2-Direct-v0 --headless --num_envs 4096 --max_iterations 1000
 ```
 
-如果你想開啟 Isaac Sim 視窗，將訓練指令中的 `--headless` 拿掉即可。
+### 2. 驗證 task 與訓練環境
 
-### 推薦 Isaac Lab / Isaac Sim 環境
+```bash
+python scripts/list_envs.py
+python -u scripts/zero_agent.py \
+  --task=Template-TanchoV2-Direct-v0 --num_envs=8 --headless \
+  --max_steps=200 --fail_mean_episode_steps=10 --fail_non_timeout_ratio=1.01
+```
 
-本匯出工程推薦使用下面這套已驗證配置：
+`scripts/list_envs.py` 應列出 `Template-TanchoV2-Direct-v0`，zero-agent 結束時應顯示 `ZERO_AGENT_GATE status=passed`。
+
+Zero-agent 是正式訓練前的低成本行前檢查。它不會訓練 policy，而是在 8 個環境中以 zero action 執行 200 control steps，確認 Isaac Sim、CUDA、URDF、action/observation shape、reward、termination 與 reset 能夠完整運作。通過只代表環境可開始訓練，不代表機器人已學會站立。
+
+### 3. 開始全新訓練
+
+```bash
+python -u scripts/rsl_rl/train.py \
+  --task=Template-TanchoV2-Direct-v0 --num_envs=4096 --headless \
+  --max_iterations=1500
+```
+
+- `--task`：選擇訓練任務
+- `--num_envs=4096`：同時並行環境數量
+- `--headless`：不開啟 Isaac Sim 視窗渲染
+- `--max_iterations=1500`：最多 iterations 次數
+
+這是全新訓練，不要加入 `--resume`、`--load_run` 或 `--checkpoint`。
+
+### 4. TensorBoard 與 Play
+
+```bash
+tensorboard --logdir logs/rsl_rl --host 127.0.0.1 --port 6006
+
+python scripts/rsl_rl/play.py \
+  --task=Template-TanchoV2-Direct-v0 --num_envs=1
+```
+
+Play 預設載入最新 run 的最新 model。
+
+如要指定 model，在 Play 指令最後加上：
+
+```text
+--checkpoint=logs/rsl_rl/tancho_v2/<run_timestamp>/model_x.pt
+```
+
+## AI Agent 接入點（選用）
+
+`scripts/agent_entrypoint.sh`
+
+```bash
+bash scripts/agent_entrypoint.sh list-envs
+bash scripts/agent_entrypoint.sh zero-agent
+bash scripts/agent_entrypoint.sh train
+bash scripts/agent_entrypoint.sh tensorboard
+bash scripts/agent_entrypoint.sh play
+bash scripts/agent_entrypoint.sh play logs/rsl_rl/tancho_v2/<run_timestamp>/model_x.pt
+```
+
+## 已驗證的訓練環境
+
+本工程已驗證的訓練組合：
 
 ```text
 Python 3.11
 Isaac Sim 5.1.0
-Isaac Lab v2.3.2 / pip 2.3.2.post1
+Isaac Lab 2.3.2
 Torch 2.7.0+cu128
 Torchvision 0.22.0+cu128
-LeggedGym-Ex 0.3.0 提供的 rsl_rl
+rsl_rl 5.0.1
 ```
 
-匯出包內已包含一鍵環境腳本：
-
-```bash
-chmod +x scripts/setup_stackforce_isaac_lab_sim_env.sh
-./scripts/setup_stackforce_isaac_lab_sim_env.sh
-```
-
-腳本預設建立 `env_isaaclab`。如果你想改環境名稱：
-
-```bash
-ENV_NAME=my_isaaclab ./scripts/setup_stackforce_isaac_lab_sim_env.sh
-```
-
-### 訓練輸出和 checkpoint
+## 訓練輸出和 checkpoint
 
 訓練輸出部位於：
 
@@ -59,31 +102,21 @@ find logs -name "policy.onnx"
 
 訓練會儲存 `model_final.pt`，且系統還會嘗試匯出 `exported/policies/policy.onnx`。
 
-### 繼續訓練
+## 手動繼續訓練
+
+下列指令僅用於手動延續舊 run。若 observation 或 action 維度有變更，不可載入舊 checkpoint。
 
 ```bash
 python scripts/rsl_rl/train.py --task Template-TanchoV2-Direct-v0 --resume --load_run <run_dir_name> --checkpoint <model_x.pt>
 ```
 
-### 播放訓練後的策略
-
-```bash
-python scripts/rsl_rl/play.py --task Template-TanchoV2-Direct-v0 --num_envs 1 --disable_resets
-```
-
-如需載入指定 checkpoint：
-
-```bash
-python scripts/rsl_rl/play.py --task Template-TanchoV2-Direct-v0 --checkpoint logs/rsl_rl/<experiment_name>/<timestamp>/model_final.pt --num_envs 1 --disable_resets
-```
-
-從 Checkpoint 重新生成 ONNX：
+## 從 Checkpoint 匯出 ONNX
 
 ```bash
 python scripts/rsl_rl/play.py --task Template-TanchoV2-Direct-v0 --checkpoint logs/rsl_rl/<experiment_name>/<timestamp>/model_final.pt --num_envs 1 --disable_resets --export_onnx --num_steps 1
 ```
 
-### 新增自訂 Reward
+## 新增自訂 Reward
 
 編輯：
 

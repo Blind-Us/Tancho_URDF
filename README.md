@@ -2,6 +2,8 @@
 
 Tancho 是一個 6 自由度（6-DOF）雙輪腿機器人專案。本專案包含 CAD 機構設計模型、3D 列印檔，以及基於 NVIDIA Isaac Lab 與 RSL_RL 進行強化學習（RL）訓練的仿真環境。
 
+![Tancho V2 雙輪腿機器人 CAD 模型](./docs/assets/tancho-v2-cad.png)
+
 ---
 
 
@@ -17,6 +19,17 @@ Tancho/
 └── README.md               # 專案說明文件
 ```
 
+`Tancho_v2/` 僅包含機器人 URDF 與 Mesh 模型資源；`Tancho_v2_simready/` 是可安裝、驗證、訓練與 Play 的 Isaac Lab 工程。
+
+---
+
+## 訓練與模擬 (Training and Simulation)
+
+訓練專案位於 [`Tancho_v2_simready/`](./Tancho_v2_simready/)。
+
+- [中文安裝、環境驗證與訓練指南](./Tancho_v2_simready/README.zh.md)
+- [English installation, validation, and training guide](./Tancho_v2_simready/README.en.md)
+
 ---
 
 ## 版本演進 (Version History)
@@ -29,42 +42,3 @@ Tancho/
 * 修復 V1 導出時 Mesh 不精確、質量慣量與幾何中心偏差問題。
 * URDF 頂層加入 Dummy Root Link 並修正 X 軸旋轉與生成撞地問題。
 * 採用 Isaac Lab `ManagerBasedRLEnv` 寫法，於 `tancho_v2_env_cfg.py` 配置完整的 MDP 框架。
-
----
-
-##  快速開始 (Quick Start)
-
-### 1. 啟動 PPO 強化學習訓練
-進到 `Tancho_v2_simready` 目錄並執行訓練指令：
-
-```bash
-conda activate env_isaaclab
-cd Tancho_v2_simready
-python scripts/rsl_rl/train.py --task=Template-TanchoV2-Direct-v0 --num_envs=4096 --headless
-```
-
-
-### 2. 模型評估與視覺化展示 (Play)
-載入訓練好的模型檔進行推論測試：
-
-```bash
-python scripts/rsl_rl/play.py --task=Template-TanchoV2-Direct-v0 --num_envs=16
-```
-
-
-### 3. 即時監控訓練曲線
-開啟 TensorBoard 觀察 Reward 與 Loss 變化：
-
-```bash
-tensorboard --logdir=logs/rsl_rl/
-```
-
-
----
-
-##  環境開發與 MDP 獎勵函數修改
-若需修改仿真環境參數、觀測值（Observations）、動作空間（Actions）或獎勵函數（Rewards），主要程式碼目錄位於：
-
-```text
-Tancho_v2_simready/source/stackforce_simready_tancho_v2_lab/stackforce_simready_tancho_v2_lab/tasks/direct/tancho_v2/
-```

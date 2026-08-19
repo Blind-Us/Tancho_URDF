@@ -356,7 +356,7 @@
     <parent link="thigh_L" />
     <child link="calf_L" />
     <axis xyz="0 0 1" />
-    <limit lower="-1.57" upper="1.57" effort="10" velocity="5" />
+    <limit lower="0" upper="3" effort="10" velocity="5" />
   </joint>
 
   <joint name="joint_wheel_L" type="revolute">
@@ -380,7 +380,7 @@
     <parent link="thigh_R" />
     <child link="calf_R" />
     <axis xyz="0 0 1" />
-    <limit lower="-1.57" upper="1.57" effort="10" velocity="5" />
+    <limit lower="0" upper="3" effort="10" velocity="5" />
   </joint>
 
   <joint name="joint_wheel_R" type="revolute">

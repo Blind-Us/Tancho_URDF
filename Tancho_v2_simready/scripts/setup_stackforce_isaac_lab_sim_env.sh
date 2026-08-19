@@ -8,7 +8,6 @@ set -euo pipefail
 ENV_NAME="${ENV_NAME:-env_isaaclab}"
 INSTALL_ROOT="${INSTALL_ROOT:-$HOME}"
 ISAACLAB_DIR="${ISAACLAB_DIR:-$INSTALL_ROOT/IsaacLab}"
-LEGGED_GYM_EX_DIR="${LEGGED_GYM_EX_DIR:-$HOME/leggedgymex/LeggedGym-Ex}"
 ISAACLAB_TAG="${ISAACLAB_TAG:-v2.3.2}"
 
 if ! command -v conda >/dev/null 2>&1; then
@@ -42,16 +41,7 @@ cd "$ISAACLAB_DIR"
 git fetch --tags
 git checkout "$ISAACLAB_TAG"
 ./isaaclab.sh --install
-./isaaclab.sh --install rsl_rl || true
-
-# SimReady has been validated with the rsl_rl package bundled by LeggedGym-Ex.
-if [ ! -d "$LEGGED_GYM_EX_DIR/.git" ]; then
-  mkdir -p "$(dirname "$LEGGED_GYM_EX_DIR")"
-  git clone https://github.com/lupinjia/LeggedGym-Ex.git "$LEGGED_GYM_EX_DIR"
-fi
-
-python -m pip uninstall -y rsl-rl rsl-rl-lib >/dev/null 2>&1 || true
-python -m pip install -e "$LEGGED_GYM_EX_DIR" --no-deps
+python -m pip install "rsl-rl-lib==5.0.1"
 
 python - <<'PY'
 import importlib.metadata as md

@@ -348,7 +348,7 @@
     <parent link="base_link" />
     <child link="thigh_L" />
     <axis xyz="0 0 1" />
-    <limit lower="-1.57" upper="1.57" effort="10" velocity="5" />
+    <limit lower="-1.57" upper="1.57" effort="12.5" velocity="12.5663706" />
   </joint>
 
   <joint name="joint_calf_L" type="revolute">
@@ -356,15 +356,15 @@
     <parent link="thigh_L" />
     <child link="calf_L" />
     <axis xyz="0 0 1" />
-    <limit lower="-1.57" upper="1.57" effort="10" velocity="5" />
+    <limit lower="0" upper="3" effort="12.5" velocity="12.5663706" />
   </joint>
 
-  <joint name="joint_wheel_L" type="revolute">
+  <joint name="joint_wheel_L" type="continuous">
     <origin xyz="0 -0.14999754 -0.037004615" rpy="3.1415927 0 0" />
     <parent link="calf_L" />
     <child link="wheel_L" />
     <axis xyz="0 0 1" />
-    <limit lower="-3.14" upper="3.14" effort="10" velocity="5" />
+    <limit effort="0.45" velocity="52.3598776" />
   </joint>
 
   <joint name="joint_thigh_R" type="revolute">
@@ -372,7 +372,7 @@
     <parent link="base_link" />
     <child link="thigh_R" />
     <axis xyz="0 0 1" />
-    <limit lower="-1.57" upper="1.57" effort="10" velocity="5" />
+    <limit lower="-1.57" upper="1.57" effort="12.5" velocity="12.5663706" />
   </joint>
 
   <joint name="joint_calf_R" type="revolute">
@@ -380,15 +380,15 @@
     <parent link="thigh_R" />
     <child link="calf_R" />
     <axis xyz="0 0 1" />
-    <limit lower="-1.57" upper="1.57" effort="10" velocity="5" />
+    <limit lower="0" upper="3" effort="12.5" velocity="12.5663706" />
   </joint>
 
-  <joint name="joint_wheel_R" type="revolute">
+  <joint name="joint_wheel_R" type="continuous">
     <origin xyz="0 -0.14999754 0.060004615" rpy="3.1415927 0 0" />
     <parent link="calf_R" />
     <child link="wheel_R" />
     <axis xyz="0 0 1" />
-    <limit lower="-3.14" upper="3.14" effort="10" velocity="5" />
+    <limit effort="0.45" velocity="52.3598776" />
   </joint>
   
 </robot>

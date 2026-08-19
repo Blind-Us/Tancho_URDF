@@ -1,0 +1,163 @@
+Tancho v2 平地平衡 MDP — 修改與微調指南
+==========================================
+更新日期：2026-08-11
+適用套件：Isaac Lab 0.54.4 / Isaac Sim 5.1.0 / rsl_rl PPO
+目錄：tasks/direct/tancho_v2/
+
+--------------------------------------------------------------------------
+0. 本次修改總覽（與原版差異）
+--------------------------------------------------------------------------
+檔案：
+  tancho_v2_env_cfg.py   主要 MDP 定義（本次重寫）
+  custom_rewards.py      自訂 reward / curriculum 函式
+  agents/rsl_rl_ppo_cfg.py  PPO 超參數
+
+原版 6 個導致站不穩的結構性問題，本次全部處理：
+  1. 沒有 alive 獎勵                -> 新增 mdp.is_alive (w=1.0)
+  2. base_height target=0.2m 錯誤   -> 改 0.34m, w 從 -10 降到 -2.0
+  3. wheel JointVelocity scale=5.0  -> 降到 1.0
+  4. reset 與初始姿態矛盾           -> 改用 reset_joints_by_offset 圍繞站姿 +-0.1 rad
+  5. reward 量級失衡 (w=-100)       -> 全部壓到 |w|<=10，最大懲罰單項 -5.0
+  6. 終止條件涵蓋 thigh/calf        -> 只留 base_link_root, 並加 bad_orientation 0.8 rad
+
+--------------------------------------------------------------------------
+1. 獎勵權重總表與調整方向
+--------------------------------------------------------------------------
+【正項】（每 step 最大值，設計總和約 4.0，避免膨脹）
+  alive              w=+1.0   站著就給分。學會平衡前最重要的訊號。
+                             調整：若 agent 很快就「躺著不動刷 alive」，先檢查
+                             bad_orientation 是否生效，不要輕易把 alive 調低。
+
+  wheel_contact      w=+0.5   兩輪都觸地才給分（自訂，custom_rewards.py）。
+                             調整：若 agent 學會踮腳/單輪，把此項提到 1.0；
+                             若發現輪子一直打滑空轉，先檢查摩擦係數與輪子 damping。
+
+  tracking_lin_vel   w=+1.5   線速度追蹤 (exp kernel, std^2=0.25)。
+  tracking_ang_vel   w=+0.75  角速度追蹤。
+                             這兩項在前 100k step 指令為 0，所以是「不要亂動」的
+                             約束；curriculum 開啟後才變成主要任務獎勵。
+                             調整：站穩後若想跑得更快更準，可把 lin_vel 升到 2.0。
+
+【姿態與高度懲罰】
+  base_height        w=-2.0   target=0.34 m。
+                             調整：若實際站姿持續低於/高於 0.34，先改站姿關節角
+                             (見第 3 節)，不要直接拉 target；兩者必須一致。
+  flat_orientation   w=-2.5   懲罰機身傾斜 (roll/pitch)。
+  lin_vel_z          w=-0.5   懲罰上下跳動。
+  ang_vel_xy         w=-0.1   懲罰機身晃動角速度。
+
+【關節與能量懲罰】
+  joint_deviation    w=-0.1   只限 4 個腿關節，懲罰偏離 default (站姿)。
+                             調整：若 agent 站姿太僵硬無法適應干擾，降到 -0.05；
+                             若腿亂甩，升到 -0.2。絕對不要超過 -0.5。
+  action_rate        w=-0.05  動作平滑。
+  dof_vel            w=-5e-5
+  dof_acc            w=-1e-7
+  torques            w=-2e-5  這三項是能量正規化，量級已很小。
+                             調整：若馬達發燙/模擬電流過大，把 torques 升到 -1e-4。
+
+【安全與限位】
+  collision          w=-5.0   只懲罰 base_link_root 撞地 (threshold 1.0 N)。
+  dof_pos_limits     w=-2.0   關節位置限位 (soft limit 0.9)。
+  dof_vel_limits     w=-0.5   關節速度限位。
+
+--------------------------------------------------------------------------
+2. Curriculum（兩階段，修改位置：CurriculumCfg）
+--------------------------------------------------------------------------
+階段 A (0 ~ 100k steps):
+  所有 env 指令為 0 (rel_standing_envs=1.0)，push 推力為 0。
+  目標：學會站立平衡。
+
+階段 B (>100k steps, CURRICULUM_VEL_ON_STEPS):
+  rel_standing_envs 從 1.0 降到 0.5，即一半 env 開始收到速度指令。
+  調整：若 100k 時還站不穩，把數字調大 (200k)。可在 tensorboard 觀察
+  base_height 與 flat_orientation 是否收斂。
+
+階段 C (>200k steps, CURRICULUM_PUSH_ON_STEPS):
+  開啟隨機推力 (x,y 各 +-0.5 m/s)。
+  調整：若一站穩就被推倒，先降到 +-0.2；若輕鬆站穩，升到 +-1.0。
+
+--------------------------------------------------------------------------
+3. 站姿與動作空間（修改位置：PTanchoV2SceneCfg / ActionsCfg）
+--------------------------------------------------------------------------
+目前站姿（URDF 關節限位 thigh/calf = +-1.57 rad）：
+  STAND_THIGH = +0.35 rad
+  STAND_CALF  = -0.70 rad
+  init z      = 0.38 m
+  base 目標高 = 0.34 m
+
+調整方向：
+  - 想站高一點：calf 往 0 的方向調 (例如 -0.5)，同時把 base target 調高。
+  - 想站低一點（重心更穩）：calf 往 -1.0 調，base target 調低到 ~0.30。
+  - 左右不對稱：檢查 URDF 裡 L/R 關節 origin 是否鏡像，不是 reward 問題。
+
+動作 scale：
+  joint_pos scale=0.25  ->  policy 輸出 +-1 對應 +-0.25 rad 位置偏移
+  joint_vel scale=1.0   ->  policy 輸出 +-1 對應 +-1.0 rad/s 輪速
+  調整：若腿部動作太粗糙導致震盪，把 joint_pos scale 降到 0.15；
+        若輪子反應太慢無法平衡，把 joint_vel scale 升到 2.0。
+
+--------------------------------------------------------------------------
+4. 終止條件（修改位置：TerminationsCfg）
+--------------------------------------------------------------------------
+  base_contact:  body_names=["base_link_root"], threshold=5.0 N
+                 注意 Isaac Lab 把固定關節 merge 後 body 名會加 _root。
+                 若之後 URDF 改動導致名稱不同，zero_agent 會報錯並列出可用名稱。
+  bad_orientation: limit_angle=0.8 rad (~46 度)。超過就終止。
+                 調整：想讓 agent 學更極端的恢復動作可放寬到 1.0。
+
+--------------------------------------------------------------------------
+5. Domain Randomization（修改位置：EventCfg）
+--------------------------------------------------------------------------
+  add_base_mass:      -0.2 ~ +0.5 kg (base 自重 1.26 kg)
+  randomize_friction: 靜/動摩擦 0.4 ~ 1.25
+  push_robot:         初始 (0,0)，curriculum 階段 C 後變 +-0.5 m/s
+
+  調整：若 sim-to-real gap 大（真實機器人站不穩），
+        先把摩擦範圍下限降到 0.2，質量範圍升到 +1.0 kg。
+
+--------------------------------------------------------------------------
+6. PPO 超參數（agents/rsl_rl_ppo_cfg.py）
+--------------------------------------------------------------------------
+  actor/critic obs_normalization 已改為 True（reward 重新平衡後需要）。
+  init_noise_std=1.0，若初期動作太亂可降到 0.5。
+  max_iterations=1500，以 4096 envs / 50 Hz / 20 s episode 估算，
+  100k steps 約等於 500 個 iteration 左右 (1 step = 1 env step，
+  PPO iteration = num_envs * num_steps_per_env = 4096*24 ~= 98k samples)。
+
+--------------------------------------------------------------------------
+7. 除錯與驗證指令
+--------------------------------------------------------------------------
+# 零動作 smoke test（確認環境可載入、reward 無爆炸）
+cd /media/azul/861896C11896B023/Tancho/Tancho_v2_simready
+env CONDA_NO_PLUGINS=true ~/miniconda3/envs/env_isaaclab/bin/python -u \
+    scripts/zero_agent.py --task Template-TanchoV2-Direct-v0 --num_envs 16 --headless
+
+# 正式訓練
+env CONDA_NO_PLUGINS=true ~/miniconda3/envs/env_isaaclab/bin/python -u \
+    scripts/rsl_rl/train.py --task Template-TanchoV2-Direct-v0 --num_envs 4096 --headless
+
+# Tensorboard
+tensorboard --logdir logs/rsl_rl/tancho_v2
+
+--------------------------------------------------------------------------
+8. 常見症狀與對應調整
+--------------------------------------------------------------------------
+症狀 A：一開始就全部翻倒，episode 長度 < 1 s
+  -> 檢查站姿是否讓輪子觸地（目前 thigh=0.35/calf=-0.70 對應 base 高 ~0.34m）
+  -> 若 base_z 在 step 0 就遠離 0.34，調整 init_state 的 z
+
+症狀 B：能站但不動，tracking reward 一直是 0
+  -> 確認 curriculum 是否已過 100k steps (tensorboard 看 rel_standing_envs)
+  -> 或手動把 CURRICULUM_VEL_ON_STEPS 調小
+
+症狀 C：站穩後輪子一直打滑/原地轉
+  -> 調高 wheel_contact 權重到 1.0
+  -> 或把輪子 damping 從 0.5 升到 1.0
+
+症狀 D：reward 數值異常大 (>50)
+  -> 檢查是否有 termination 迴圈（剛 reset 又馬上 terminate）
+  -> 檢查 collision threshold 是否太低，導致一直扣分
+
+症狀 E：學到單腳站立/踮腳
+  -> wheel_contact 目前要求「兩輪都觸地」，若學出單腳，把 threshold 從 1.0 N 提高到 5.0 N

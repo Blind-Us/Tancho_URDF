@@ -17,6 +17,10 @@ __pycache__/
 *.pth
 *.onnx
 
+# Simulation / Training outputs
+outputs/
+tmp/
+
 # 系統與編輯器設定
 .DS_Store
 .vscode/
