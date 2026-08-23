@@ -1,27 +1,48 @@
-# Logs
+# Training logs and runtime outputs
 logs/
 log/
+outputs/
+tmp/
 *.log
 *.events.out.tfevents.*
 
-# Caches
+# Training models and exports
+*.pt
+*.pth
+*.onnx
+
+# Python bytecode and caches
 __pycache__/
 *.py[cod]
 *$py.class
 .cache/
 *.cache
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 
-# 訓練模型權重
-*.pt
-*.pth
-*.onnx
+# Python packaging
+*.egg-info/
+*.egg
+build/
+dist/
 
-# Simulation / Training outputs
-outputs/
-tmp/
+# MCP runtime
+.mcp/
 
-# 系統與編輯器設定
+# Local Python environments
+.venv/
+venv/
+env/
+
+# System and editor settings
 .DS_Store
 .vscode/
 .idea/
+
+# Temporary editor files
+*.tmp
+*.bak
+*~

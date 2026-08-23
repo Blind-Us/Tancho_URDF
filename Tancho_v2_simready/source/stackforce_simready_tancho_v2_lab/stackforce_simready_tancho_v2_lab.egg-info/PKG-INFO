@@ -1,9 +1,0 @@
-Metadata-Version: 2.4
-Name: stackforce_simready_tancho_v2_lab
-Version: 0.1.0
-Summary: StackForce SimReady Isaac Lab export for Template-TanchoV2-Direct-v0
-Requires-Python: >=3.10
-Requires-Dist: psutil
-Dynamic: requires-dist
-Dynamic: requires-python
-Dynamic: summary
